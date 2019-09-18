@@ -17,6 +17,59 @@ readline(char* buf, int n) {
 }
 
 int
+open_stdin(char* path) {
+  close(0);
+  if (open(path, O_RDONLY) != 0) {
+    fprintf(2, "open stdin %s failed!\n", path);
+    exit(1);
+  }
+  return 0;
+}
+
+int
+redirect_stdin(int fd) {
+  close(0);
+  if (dup(fd) != 0) {
+    fprintf(2, "redirect stdin failed!\n");
+    exit(1);
+  }
+  return 0;
+}
+
+int
+open_stdout(char* path) {
+  close(1);
+  if (open(path, O_CREATE | O_WRONLY) != 1) {
+    fprintf(2, "open stdout %s failed!\n", path);
+    exit(1);
+  }
+  return 0;
+}
+
+int
+redirect_stdout(int fd) {
+  close(1);
+  if (dup(fd) != 1) {
+    fprintf(2, "redirect stdout failed!\n");
+    exit(1);
+  }
+  return 0;
+}
+
+int
+destroy_stdin() {
+  close(0);
+  return 0;
+}
+
+int
+destroy_stdout() {
+  close(1);
+  return 0;
+}
+
+
+int
 run(char* path, char** argv) {
   char** pipe_argv = 0;
   char* stdin = 0;
@@ -44,43 +97,28 @@ run(char* path, char** argv) {
     if (pipe_argv != 0) {
       pipe(fd);
       if (fork() == 0) {
-        close(0);
-        if (dup(fd[R]) != 0) {
-          fprintf(2, "redirect read pipe failed!");
-          exit(1);
-        }
+        close(fd[W]);
+        redirect_stdin(fd[R]);
         run(pipe_argv[0], pipe_argv);
         close(fd[R]);
-        close(fd[W]);
-        close(0);
+        destroy_stdin();
         exit(0);
       }
-      close(1);
-      if(dup(fd[W]) != 1) {
-        fprintf(2, "redirect write pipe failed!");
-        exit(1);
-      }
-    }
-    if (stdin != 0) {
-      close(0);
-      if (open(stdin, O_RDONLY) != 0) {
-        fprintf(2, "open stdin %s failed!", stdin);
-        exit(1);
-      }
+      close(fd[R]);
+      redirect_stdout(fd[W]);
     }
 
-    if (stdout != 0) {
-      close(1);
-      if (open(stdout, O_CREATE|O_WRONLY) != 1) {
-        fprintf(2, "open stdout %s failed!", stdout);
-        exit(1);
-      }
-    }
+    if (stdin != 0) open_stdin(stdin);
+    if (stdout != 0) open_stdout(stdout);
+    
     exec(path, argv);
+
+    if (stdin != 0) destroy_stdin(stdin);
+    if (stdout != 0) destroy_stdout(stdout);
+  
     if (pipe_argv != 0) {
-      close(fd[R]);
       close(fd[W]);
-      close(1);
+      destroy_stdout();
       wait(0);
     }
     exit(0);
