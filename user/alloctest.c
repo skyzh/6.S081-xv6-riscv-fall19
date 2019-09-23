@@ -16,20 +16,20 @@ test0() {
   
   if(NCHILD*NFD < NFILE) {
     printf("test setup is wrong\n");
-    exit(-1);
+    exit(1);
   }
 
   for (i = 0; i < NCHILD; i++) {
     int pid = fork();
     if(pid < 0){
       printf("fork failed");
-      exit(-1);
+      exit(1);
     }
     if(pid == 0){
       for(j = 0; j < NFD; j++) {
         if ((fd = open("README", O_RDONLY)) < 0) {
           // the open() failed; exit with -1
-          exit(-1);
+          exit(1);
         }
       }
       sleep(10);
@@ -37,16 +37,19 @@ test0() {
     }
   }
 
-  int xstatus;
+  int all_ok = 1;
   for(int i = 0; i < NCHILD; i++){
+    int xstatus;
     wait(&xstatus);
-    if(xstatus == -1) {
-       printf("filetest: FAILED\n");
-       exit(-1);
+    if(xstatus != 0) {
+      if(all_ok == 1)
+        printf("filetest: FAILED\n");
+      all_ok = 0;
     }
   }
 
-   printf("filetest: OK\n");
+  if(all_ok)
+    printf("filetest: OK\n");
 }
 
 // Allocate all free memory and count how it is
@@ -60,12 +63,12 @@ void test1()
   printf("memtest: start\n");  
   if(pipe(fds) != 0){
     printf("pipe() failed\n");
-    exit(-1);
+    exit(1);
   }
   int pid = fork();
   if(pid < 0){
     printf("fork failed");
-    exit(-1);
+    exit(1);
   }
   if(pid == 0){
       close(fds[0]);
@@ -76,7 +79,7 @@ void test1()
         *(int *)(a+4) = 1;
         if (write(fds[1], "x", 1) != 1) {
           printf("write failed");
-          exit(-1);
+          exit(1);
         }
       }
       exit(0);
