@@ -120,6 +120,7 @@ mkfs/mkfs: mkfs/mkfs.c $K/fs.h
 .PRECIOUS: %.o
 
 UPROGS=\
+	$U/_lazytests\
 	$U/_cat\
 	$U/_echo\
 	$U/_forktest\
@@ -179,7 +180,7 @@ qemu: $K/kernel fs.img
 	sed "s/:1234/:$(GDBPORT)/" < $^ > $@
 
 qemu-gdb: $K/kernel .gdbinit fs.img
-	@echo "*** Now run 'gdb'." 1>&2
+	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
 
