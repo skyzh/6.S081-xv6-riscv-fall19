@@ -65,6 +65,15 @@ usertrap(void)
     intr_on();
 
     syscall();
+  } else if (r_scause() == 13 || r_scause() == 15) {
+    int ret = 0;
+    if ((ret = handle_page_fault(p->pagetable, r_stval())) != 0) {
+      p->killed = 1;
+      printf("failed to handle page fault %d, pid=%d sepc=%p stval=%p\n",
+        ret, p->pid, r_sepc(), r_stval());
+    }
+    /* printf("page fault, pid=%d sepc=%p stval=%p\n",
+        p->pid, r_sepc(), r_stval()); */
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {
