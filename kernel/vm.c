@@ -370,12 +370,18 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 
   while(len > 0){
     va0 = PGROUNDDOWN(dstva);
+    if(va0 >= MAXVA)
+      return -1;
+    pte_t *pte = walk(pagetable, va0, 0);
+    if (*pte & PTE_COW)
+      if(handle_page_fault(pagetable, va0) != 0) return -1;
     pa0 = walkaddr(pagetable, va0);
     if(pa0 == 0)
       return -1;
     n = PGSIZE - (dstva - va0);
     if(n > len)
       n = len;
+    
     memmove((void *)(pa0 + (dstva - va0)), src, n);
 
     len -= n;
