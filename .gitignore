@@ -5,7 +5,6 @@ _*
 *.asm
 *.sym
 *.img
-*.pyc
 vectors.S
 bootblock
 entryother

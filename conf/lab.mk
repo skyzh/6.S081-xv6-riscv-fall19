@@ -1,1 +1,1 @@
-LAB=lazy
+LAB=alloc
