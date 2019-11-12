@@ -16,31 +16,37 @@
 struct devsw devsw[NDEV];
 struct {
   struct spinlock lock;
-  struct file file[NFILE];
+  struct list lst;
 } ftable;
+
+struct file_ptr {
+  struct file file;
+  struct list node;
+};
 
 void
 fileinit(void)
 {
   initlock(&ftable.lock, "ftable");
+  lst_init(&ftable.lst);
 }
 
 // Allocate a file structure.
 struct file*
 filealloc(void)
 {
-  struct file *f;
-
   acquire(&ftable.lock);
-  for(f = ftable.file; f < ftable.file + NFILE; f++){
-    if(f->ref == 0){
-      f->ref = 1;
-      release(&ftable.lock);
-      return f;
-    }
-  }
+  struct list *head = &ftable.lst;
+  // allocate file object and linked-list pointer
+  struct file_ptr *fp = bd_malloc(sizeof(struct file_ptr));
+  // clear data
+  memset(fp, 0, sizeof(struct file_ptr));
+  // push item to linked-list
+  struct file *f = (struct file*) fp;
+  lst_push(head, &fp->node);
+  f->ref = 1;
   release(&ftable.lock);
-  return 0;
+  return f;
 }
 
 // Increment ref count for file f.
@@ -80,6 +86,10 @@ fileclose(struct file *f)
     iput(ff.ip);
     end_op(ff.ip->dev);
   }
+
+  struct file_ptr* fp = (struct file_ptr*) f;
+  lst_remove(&fp->node);
+  bd_free(f);
 }
 
 // Get metadata about file f.
