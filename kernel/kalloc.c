@@ -26,6 +26,7 @@ struct kmem_t {
 void
 kinit()
 {
+  /*
   initlock(&kmem[0].lock, "kmem0");
   initlock(&kmem[1].lock, "kmem1");
   initlock(&kmem[2].lock, "kmem2");
@@ -33,7 +34,9 @@ kinit()
   initlock(&kmem[4].lock, "kmem4");
   initlock(&kmem[5].lock, "kmem5");
   initlock(&kmem[6].lock, "kmem6");
-  initlock(&kmem[7].lock, "kmem7");
+  initlock(&kmem[7].lock, "kmem7");*/
+  for (int i = 0; i < NCPU; i++)
+    initlock(&kmem[i].lock, "kmem");
   freerange(end, (void*)PHYSTOP);
 }
 
