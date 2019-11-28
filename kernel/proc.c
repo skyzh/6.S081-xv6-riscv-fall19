@@ -218,6 +218,8 @@ userinit(void)
 
   p->state = RUNNABLE;
 
+  p->alarm_interval = 0;
+
   release(&p->lock);
 }
 

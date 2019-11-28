@@ -26,3 +26,5 @@
 #define SYS_crash  23
 #define SYS_mount  24
 #define SYS_umount 25
+#define SYS_sigalarm 26
+#define SYS_sigreturn 27
