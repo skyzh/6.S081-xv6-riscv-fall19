@@ -451,3 +451,11 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
     return -1;
   }
 }
+
+uint64 umap(uint64 addr, int length, int prot, int flags, int fd, int offset) {
+  return -1;
+}
+
+uint64 uunmap(uint64 addr, int length) {
+  return -1;
+}
