@@ -13,7 +13,6 @@
 // * Only one process at a time can use a buffer,
 //     so do not keep them longer than necessary.
 
-
 #include "types.h"
 #include "param.h"
 #include "spinlock.h"
@@ -25,7 +24,8 @@
 
 #define NBUCKET 13
 
-struct {
+struct
+{
   struct buf buf[NBUF];
 
   // Linked list of all buffers, through prev/next.
@@ -34,12 +34,12 @@ struct {
   struct spinlock lock[NBUCKET];
 } bcache;
 
-uint b_hash(uint blockno) {
+uint b_hash(uint blockno)
+{
   return blockno % NBUCKET;
 }
 
-void
-binit(void)
+void binit(void)
 {
   struct buf *b;
 
@@ -47,12 +47,14 @@ binit(void)
     initlock(&bcache.lock[i], "bcache.bucket");
 
   // Create linked list of buffers
-  for (int i = 0; i < NBUCKET; i++) {
+  for (int i = 0; i < NBUCKET; i++)
+  {
     struct buf *head = &bcache.head[i];
     head->prev = head;
     head->next = head;
   }
-  for(b = bcache.buf; b < bcache.buf+NBUF; b++){
+  for (b = bcache.buf; b < bcache.buf + NBUF; b++)
+  {
     b->next = bcache.head[0].next;
     b->prev = &bcache.head[0];
     initsleeplock(&b->lock, "buffer");
@@ -64,7 +66,7 @@ binit(void)
 // Look through buffer cache for block on device dev.
 // If not found, allocate a buffer.
 // In either case, return locked buffer.
-static struct buf*
+static struct buf *
 bget(uint dev, uint blockno)
 {
   struct buf *b;
@@ -73,21 +75,29 @@ bget(uint dev, uint blockno)
   uint h = _h;
 
   acquire(&bcache.lock[h]);
-  for(b = bcache.head[h].next; b != &bcache.head[h]; b = b->next){
-    if(b->dev == dev && b->blockno == blockno){
+  for (b = bcache.head[h].next; b != &bcache.head[h]; b = b->next)
+  {
+    if (b->dev == dev && b->blockno == blockno)
+    {
       b->refcnt++;
       release(&bcache.lock[h]);
       acquiresleep(&b->lock);
       return b;
     }
   }
-  release(&bcache.lock[h]);
-  while (1) {
+  while (1)
+  {
+    h = (h + 1) % NBUCKET;
+    if (h == _h)
+      break;
+    
     acquire(&bcache.lock[h]);
 
     // Not cached; recycle an unused buffer.
-    for(b = bcache.head[h].prev; b != &bcache.head[h]; b = b->prev){
-      if(b->refcnt == 0) {
+    for (b = bcache.head[h].prev; b != &bcache.head[h]; b = b->prev)
+    {
+      if (b->refcnt == 0)
+      {
         b->dev = dev;
         b->blockno = blockno;
         b->valid = 0;
@@ -95,7 +105,6 @@ bget(uint dev, uint blockno)
         b->prev->next = b->next;
         b->next->prev = b->prev;
         release(&bcache.lock[h]);
-        acquire(&bcache.lock[_h]);
         b->next = bcache.head[_h].next;
         b->prev = &bcache.head[_h];
         b->next->prev = b;
@@ -107,21 +116,19 @@ bget(uint dev, uint blockno)
     }
 
     release(&bcache.lock[h]);
-
-    h = (h + 1) % NBUCKET;
-    if (h == _h) break;
   }
   panic("bget: no buffers");
 }
 
 // Return a locked buf with the contents of the indicated block.
-struct buf*
+struct buf *
 bread(uint dev, uint blockno)
 {
   struct buf *b;
 
   b = bget(dev, blockno);
-  if(!b->valid) {
+  if (!b->valid)
+  {
     virtio_disk_rw(b->dev, b, 0);
     b->valid = 1;
   }
@@ -129,29 +136,27 @@ bread(uint dev, uint blockno)
 }
 
 // Write b's contents to disk.  Must be locked.
-void
-bwrite(struct buf *b)
+void bwrite(struct buf *b)
 {
-  if(!holdingsleep(&b->lock))
+  if (!holdingsleep(&b->lock))
     panic("bwrite");
   virtio_disk_rw(b->dev, b, 1);
 }
 
 // Release a locked buffer.
 // Move to the head of the MRU list.
-void
-brelse(struct buf *b)
+void brelse(struct buf *b)
 {
-  if(!holdingsleep(&b->lock))
+  if (!holdingsleep(&b->lock))
     panic("brelse");
 
   releasesleep(&b->lock);
 
-  
   uint h = b_hash(b->blockno);
   acquire(&bcache.lock[h]);
   b->refcnt--;
-  if (b->refcnt == 0) {
+  if (b->refcnt == 0)
+  {
     // no one is waiting for it.
     b->next->prev = b->prev;
     b->prev->next = b->next;
@@ -163,21 +168,19 @@ brelse(struct buf *b)
   release(&bcache.lock[h]);
 }
 
-void
-bpin(struct buf *b) {
+void bpin(struct buf *b)
+{
   uint h = b_hash(b->blockno);
   acquire(&bcache.lock[h]);
   b->refcnt++;
   release(&bcache.lock[h]);
 }
 
-void
-bunpin(struct buf *b) {
-  
+void bunpin(struct buf *b)
+{
+
   uint h = b_hash(b->blockno);
   acquire(&bcache.lock[h]);
   b->refcnt--;
   release(&bcache.lock[h]);
 }
-
-
