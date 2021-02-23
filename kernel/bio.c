@@ -74,6 +74,7 @@ bget(uint dev, uint blockno)
   uint _h = b_hash(blockno);
   uint h = _h;
 
+  // first, try to find block already in cache
   acquire(&bcache.lock[h]);
   for (b = bcache.head[h].next; b != &bcache.head[h]; b = b->next)
   {
@@ -85,6 +86,23 @@ bget(uint dev, uint blockno)
       return b;
     }
   }
+
+  // then, try to find a spare block in current cache
+  for (b = bcache.head[h].prev; b != &bcache.head[h]; b = b->prev)
+  {
+    if (b->refcnt == 0)
+    {
+      b->dev = dev;
+      b->blockno = blockno;
+      b->valid = 0;
+      b->refcnt = 1;
+      release(&bcache.lock[h]);
+      acquiresleep(&b->lock);
+      return b;
+    }
+  }
+
+  // while holding lock to original hash bucket, steal a block from other buckets
   while (1)
   {
     h = (h + 1) % NBUCKET;
